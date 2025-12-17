@@ -1,0 +1,124 @@
+# -----------------------------------------------------------------------------
+# MCP Gateway Terraform Configuration
+# Copy this file to terraform.tfvars and customize for your environment
+# -----------------------------------------------------------------------------
+
+# General Configuration
+aws_region   = "us-east-2"
+aws_profile  = "liatrio"
+environment  = "dev"
+project_name = "mcp-gateway"
+
+# DNS and Domain
+domain_name     = "mcp-gateway.dev.pop-platform.liatr.io"
+route53_zone_id = "Z04526022XWDTY6SX40DX"
+
+# Networking (single AZ for initial deployment)
+vpc_cidr            = "10.0.0.0/16"
+availability_zone   = "us-east-2a"
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidr = "10.0.10.0/24"
+database_subnet_cidrs = ["10.0.20.0/24", "10.0.21.0/24"]
+
+# ECS Configuration
+container_image  = "ghcr.io/ibm/mcp-context-forge:1.0.0-BETA-1"
+container_port   = 4444
+task_cpu         = 512   # 0.5 vCPU
+task_memory      = 1024  # 1 GB
+gunicorn_workers = 2
+
+# Auto-scaling (N+1 redundancy baseline)
+desired_count       = 2
+min_capacity        = 2
+max_capacity        = 8
+cpu_target_value    = 70
+memory_target_value = 70
+
+# RDS PostgreSQL (minimal for initial deployment)
+db_instance_class         = "db.t4g.micro"
+db_allocated_storage      = 20
+db_max_allocated_storage  = 100
+db_engine_version         = "16.6"
+db_name                   = "mcpgateway"
+db_username               = "mcpgateway"
+db_backup_retention_period = 7
+db_multi_az               = false  # Set to true for HA
+db_deletion_protection    = true
+
+# ElastiCache Redis (minimal for initial deployment)
+redis_node_type              = "cache.t4g.micro"
+redis_engine_version         = "7.1"
+redis_num_cache_nodes        = 1  # Set to 2+ for replication
+redis_snapshot_retention_limit = 3
+
+# Application Configuration
+basic_auth_user      = "admin"
+platform_admin_email = "admin@example.com"  # Change this!
+log_level            = "INFO"
+log_retention_days   = 30
+
+# Monitoring
+enable_container_insights = true
+alarm_sns_topic_arn       = ""  # Set to SNS topic ARN to receive alarms
+
+# =============================================================================
+# SSO Configuration (optional)
+# =============================================================================
+# SSO allows users to authenticate via GitHub, Azure AD, etc. instead of
+# username/password. When enabled, users clicking "Login with GitHub" will
+# be redirected to GitHub for authentication.
+#
+# USER ACCESS CONTROL:
+# - sso_auto_create_users: When true, any GitHub user can create an account
+#   on first login. Set to false to require manual user creation.
+# - sso_trusted_domains: Restrict access by email domain (e.g., ["liatrio.com"]).
+#   Leave empty to allow any email domain.
+# - sso_github_admin_orgs: GitHub org members get ADMIN privileges automatically.
+#
+# For Liatrio example:
+#   - Set sso_github_admin_orgs = ["Liatrio"] to grant admin to all Liatrio members
+#   - Leave sso_trusted_domains = [] since not all members have @liatrio.com emails
+#   - The read:org scope (default) allows checking GitHub org membership
+# =============================================================================
+
+sso_enabled              = false
+sso_auto_create_users    = true   # Allow any GitHub user to create an account
+sso_preserve_admin_auth  = true   # Keep local admin auth as fallback
+sso_trusted_domains      = []     # Empty = allow any email domain
+
+# GitHub OAuth SSO (recommended for GitHub-based teams)
+# 1. Create OAuth App at: https://github.com/settings/developers
+# 2. Set Callback URL: https://mcp-gateway.dev.pop-platform.liatr.io/auth/sso/callback/github
+# 3. Copy Client ID and Client Secret below
+sso_github_enabled       = false
+# sso_github_client_id     = "Iv1.xxxxxxxxxxxx"       # From GitHub OAuth App
+# sso_github_client_secret = "xxxxxxxxxxxxxxxx"       # From GitHub OAuth App
+sso_github_admin_orgs    = []     # e.g., ["Liatrio"] - org members get ADMIN access
+sso_github_scope         = "user:email read:org"    # read:org required for org membership checks
+
+# Microsoft Entra ID SSO (for Azure AD organizations)
+sso_entra_enabled        = false
+# sso_entra_client_id      = ""
+# sso_entra_client_secret  = ""
+# sso_entra_tenant_id      = ""
+
+# =============================================================================
+# Resource Tagging
+# =============================================================================
+# Standard tags applied to all AWS resources for governance, cost allocation,
+# and operational visibility. These are applied via AWS provider default_tags.
+# =============================================================================
+
+# Ownership and responsibility
+owner       = "daniel.hagen@liatrio.com"
+team        = "AI Innovation Squad"
+cost_center = "ai-innovation"
+
+# Classification and access
+data_classification = "internal"  # public, internal, confidential, restricted
+public_facing       = true        # Application is publicly accessible
+
+# Additional custom tags (optional)
+# additional_tags = {
+#   "custom:tag" = "value"
+# }
