@@ -713,6 +713,7 @@ class SSOService:
                 full_name=user_info.get("full_name", email),
                 is_admin=is_admin,
                 auth_provider=user_info.get("provider", "sso"),
+                skip_password_validation=True,  # SSO users don't use passwords, skip validation
             )
             if not user:
                 return None
